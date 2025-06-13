@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: rfq-api
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: gunicorn rfq_api:app
