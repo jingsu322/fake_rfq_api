@@ -59,7 +59,7 @@ def submit_rfq():
             requested_quantity=int(data['requested_quantity']),
             annual_estimated_volume=int(data.get('annual_estimated_volume', 0)),
             factory=data.get('factory', 'Not Specified'),
-            delivery_date=datetime.strptime(data.get('delivery_date', '2099-12-31'), '%Y-%m-%d').strftime('%Y-%m-%d').date(),
+            delivery_date=datetime.strptime(data.get('delivery_date', '2099-12-31'), '%Y-%m-%d').date(),
             application=data.get('application', 'General Use'),
             comments=data.get('comments', '')
         )
