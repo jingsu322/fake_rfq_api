@@ -1,8 +1,7 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
-
 # Initialize Flask app
 app = Flask(__name__)
 
@@ -35,9 +34,82 @@ class RFQ(db.Model):
 with app.app_context():
     db.create_all()
 
-@app.route("/")
+@app.route('/')
 def home():
-    return jsonify({"message": "This is a fake RFQ Submission API"})
+    return jsonify({"message": "This is the RFQ API homepage."})
+
+
+# Step 1: collect email and product_name only
+@app.route('/start_rfq', methods=['POST'])
+def start_rfq():
+    data = request.get_json()
+    user_email = data.get('user_email')
+    product_name = data.get('product_name')
+
+    if not user_email or not product_name:
+        return jsonify({"error": "user_email and product_name are required."}), 400
+
+    return redirect(url_for('rfq_form', user_email=user_email, product_name=product_name))
+
+# Step 2: render RFQ form pre-filled with collected info
+@app.route('/rfq_form')
+def rfq_form():
+    user_email = request.args.get('user_email', '')
+    product_name = request.args.get('product_name', '')
+
+    form_html = '''
+    <html>
+    <head><title>Submit RFQ</title></head>
+    <body>
+    <h2>Request for Quotation (RFQ)</h2>
+    <form method="POST" action="/submit_rfq_form">
+        <label>Email: <input type="email" name="user_email" value="{{ user_email }}" required></label><br>
+        <label>Product Name: <input type="text" name="product_name" value="{{ product_name }}" required></label><br>
+        <label>Company Name: <input type="text" name="company_name"></label><br>
+        <label>Product SKU: <input type="text" name="product_sku"></label><br>
+        <label>Requested Price: <input type="number" name="requested_price" step="0.01"></label><br>
+        <label>Requested Quantity: <input type="number" name="requested_quantity" required></label><br>
+        <label>Annual Estimated Volume: <input type="number" name="annual_estimated_volume"></label><br>
+        <label>Factory: <input type="text" name="factory"></label><br>
+        <label>Delivery Date (MM/DD/YYYY): <input type="text" name="delivery_date"></label><br>
+        <label>Application: <input type="text" name="application"></label><br>
+        <label>Comments:<br><textarea name="comments" rows="4" cols="40"></textarea></label><br>
+        <input type="submit" value="Submit RFQ">
+    </form>
+    </body></html>
+    '''
+    return render_template_string(form_html, user_email=user_email, product_name=product_name)
+
+# Step 3: handle full form submission
+@app.route('/submit_rfq_form', methods=['POST'])
+def submit_rfq_form():
+    try:
+        rfq = RFQ(
+            user_email=request.form['user_email'],
+            company_name=request.form.get('company_name', 'Unknown Company'),
+            product_sku=request.form.get('product_sku', 'N/A'),
+            product_name=request.form['product_name'],
+            requested_price=float(request.form.get('requested_price', 0.0)),
+            requested_quantity=int(request.form['requested_quantity']),
+            annual_estimated_volume=int(request.form.get('annual_estimated_volume', 0)),
+            factory=request.form.get('factory', 'Not Specified'),
+            delivery_date=datetime.strptime(request.form.get('delivery_date', '12/31/2099'), '%m/%d/%Y').date(),
+            application=request.form.get('application', 'General Use'),
+            comments=request.form.get('comments', '')
+        )
+        db.session.add(rfq)
+        db.session.commit()
+
+        return '''<html><body>
+        <h3>✅ RFQ submitted successfully!</h3>
+        <a href="/rfq_form?user_email=&product_name=">Submit another RFQ</a>
+        </body></html>'''
+
+    except Exception as e:
+        return f"<html><body><h3>Error: {str(e)}</h3></body></html>", 400
+
+
+
 
 # Route to submit an RFQ
 @app.route('/submit_rfq', methods=['POST'])
