@@ -90,19 +90,35 @@ def rfq_form():
 @app.route('/submit_rfq_form', methods=['POST'])
 def submit_rfq_form():
     try:
+        def to_int(val, default=0):
+            return int(val) if val and val.strip().isdigit() else default
+
+        def to_float(val, default=0.0):
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return default
+
+        def to_date(val, default_str='12/31/2099'):
+            try:
+                return datetime.strptime(val, '%m/%d/%Y').date()
+            except (ValueError, TypeError):
+                return datetime.strptime(default_str, '%m/%d/%Y').date()
+
         rfq = RFQ(
             user_email=request.form['user_email'],
             company_name=request.form.get('company_name', 'Unknown Company'),
             product_sku=request.form.get('product_sku', 'N/A'),
             product_name=request.form['product_name'],
-            requested_price=float(request.form.get('requested_price', 0.0)),
-            requested_quantity=int(request.form['requested_quantity']),
-            annual_estimated_volume=int(request.form.get('annual_estimated_volume', 0)),
+            requested_price=to_float(request.form.get('requested_price')),
+            requested_quantity=to_int(request.form.get('requested_quantity'), default=1),
+            annual_estimated_volume=to_int(request.form.get('annual_estimated_volume')),
             factory=request.form.get('factory', 'Not Specified'),
-            delivery_date=datetime.strptime(request.form.get('delivery_date', '12/31/2099'), '%m/%d/%Y').date(),
+            delivery_date=to_date(request.form.get('delivery_date')),
             application=request.form.get('application', 'General Use'),
             comments=request.form.get('comments', '')
         )
+
         db.session.add(rfq)
         db.session.commit()
 
