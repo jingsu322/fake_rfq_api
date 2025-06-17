@@ -45,19 +45,25 @@ def submit_rfq():
     data = request.get_json()
 
     try:
+        # Validate required fields
+        if not all(k in data for k in ['user_email', 'product_name', 'requested_quantity']):
+            return jsonify({"error": "Missing required fields: user_email, product_name, or requested_quantity"}), 400
+
+        # Set default values
         rfq = RFQ(
             user_email=data['user_email'],
-            company_name=data['company_name'],
-            product_sku=data['product_sku'],
+            company_name=data.get('company_name', 'Unknown Company'),
+            product_sku=data.get('product_sku', 'N/A'),
             product_name=data['product_name'],
-            requested_price=float(data['requested_price']),
+            requested_price=float(data.get('requested_price', 0.0)),
             requested_quantity=int(data['requested_quantity']),
-            annual_estimated_volume=int(data['annual_estimated_volume']),
-            factory=data['factory'],
-            delivery_date=datetime.strptime(data['delivery_date'], '%m/%d/%Y').date(),
-            application=data['application'],
-            comments=data.get('comments')
+            annual_estimated_volume=int(data.get('annual_estimated_volume', 0)),
+            factory=data.get('factory', 'Not Specified'),
+            delivery_date=datetime.strptime(data.get('delivery_date', '2099-12-31'), '%Y-%m-%d').strftime('%Y-%m-%d').date(),
+            application=data.get('application', 'General Use'),
+            comments=data.get('comments', '')
         )
+
         db.session.add(rfq)
         db.session.commit()
         return jsonify({"message": "RFQ submitted successfully."}), 201
