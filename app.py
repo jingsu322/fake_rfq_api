@@ -49,7 +49,13 @@ def start_rfq():
     if not user_email or not product_name:
         return jsonify({"error": "user_email and product_name are required."}), 400
 
-    return redirect(url_for('rfq_form', user_email=user_email, product_name=product_name))
+    # Construct the UI URL
+    form_url = url_for('rfq_form', user_email=user_email, product_name=product_name, _external=True)
+
+    return jsonify({
+        "message": "RFQ initialization successful.",
+        "form_url": form_url
+    }), 200
 
 # Step 2: render RFQ form pre-filled with collected info
 @app.route('/rfq_form')
